@@ -190,17 +190,32 @@ class Order_Links_On_Success {
             $product_ids[] = $item->get_product_id();
         }
 
-        // Show all matching links
+        // Output all matching links
         echo $this->get_order_links_for_products(array_unique($product_ids), $order);
 
-        // Also get the first URL for redirect
+        // Get first matching link for redirect
         $redirect_url = $this->get_order_links_for_products(array_unique($product_ids), $order, true);
         if ($redirect_url) {
-            echo '<script>
-                setTimeout(function() {
-                    window.location.href = "' . esc_url($redirect_url) . '";
-                }, 10000);
-            </script>';
+            ?>
+            <div id="order-link-redirect-msg" style="margin-top: 20px; padding: 10px; background: #f0f8ff; border-left: 4px solid #0071a1;">
+                You’ll be redirected in <span id="redirect-countdown">10</span> seconds…
+            </div>
+            <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var seconds = 10;
+                var countdownEl = document.getElementById('redirect-countdown');
+                var countdown = setInterval(function () {
+                    seconds--;
+                    if (seconds <= 0) {
+                        clearInterval(countdown);
+                        window.location.href = <?php echo json_encode($redirect_url); ?>;
+                    } else {
+                        countdownEl.textContent = seconds;
+                    }
+                }, 1000);
+            });
+            </script>
+            <?php
         }
     }
 
