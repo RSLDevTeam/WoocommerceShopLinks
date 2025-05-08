@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Woocommerce Order Links
- * Description: Adds configurable links per product on the thank you page and confirmation email.
- * Version: 1.2
+ * Description: Adds configurable links per product on the thank you page and confirmation email. Now with automatic redirect on thank you page.
+ * Version: 1.3
  * Author: RSL Awards
  */
 
@@ -132,7 +132,7 @@ class Order_Links_On_Success {
         <?php
     }
 
-    private function get_order_links_for_products($product_ids, $order) {
+    private function get_order_links_for_products($product_ids, $order, $return_first_url_only = false) {
         $configs = get_option('order_links_product_configs', []);
         $output = '';
         $order_id = $order->get_id();
@@ -147,7 +147,6 @@ class Order_Links_On_Success {
                     $btn = $config['button_text'] ?? '';
                     $base_url = $config['url'] ?? '';
                     if ($btn && $base_url) {
-                        // Build the product name including variation attributes if available
                         $product_name = $product ? $product->get_name() : '';
 
                         if ($item->get_variation_id()) {
@@ -157,13 +156,16 @@ class Order_Links_On_Success {
                             }
                         }
 
-                        // Build query string with product_name, order_id, and order_item_id
                         $query_args = [
                             'product_name'   => rawurlencode($product_name),
                             'order_id'       => $order_id,
                             'order_item_id'  => $item_id,
                         ];
                         $final_url = add_query_arg($query_args, $base_url);
+
+                        if ($return_first_url_only) {
+                            return $final_url;
+                        }
 
                         $output .= '<div class="order-links-section" style="margin-top: 30px; margin-bottom: 30px;">';
                         if ($intro) {
@@ -176,7 +178,7 @@ class Order_Links_On_Success {
             }
         }
 
-        return $output;
+        return $return_first_url_only ? '' : $output;
     }
 
     public function output_order_links($order_id) {
@@ -188,7 +190,18 @@ class Order_Links_On_Success {
             $product_ids[] = $item->get_product_id();
         }
 
+        // Show all matching links
         echo $this->get_order_links_for_products(array_unique($product_ids), $order);
+
+        // Also get the first URL for redirect
+        $redirect_url = $this->get_order_links_for_products(array_unique($product_ids), $order, true);
+        if ($redirect_url) {
+            echo '<script>
+                setTimeout(function() {
+                    window.location.href = "' . esc_url($redirect_url) . '";
+                }, 10000);
+            </script>';
+        }
     }
 
     public function email_order_links($order, $sent_to_admin, $plain_text, $email) {
