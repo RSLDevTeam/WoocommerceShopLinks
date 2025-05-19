@@ -220,7 +220,14 @@ class Order_Links_On_Success {
     }
 
     public function email_order_links($order, $sent_to_admin, $plain_text, $email) {
-        if (!$order || !$order->has_status('processing')) return;
+        if (
+            !$order ||
+            !$order->has_status('processing') ||
+            $sent_to_admin || // prevent sending to admin
+            $email->id !== 'customer_processing_order' // only the processing email
+        ) {
+            return;
+        }
 
         $product_ids = [];
         foreach ($order->get_items() as $item) {
